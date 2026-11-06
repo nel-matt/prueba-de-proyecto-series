@@ -1,0 +1,23 @@
+# --- R / RStudio / Positron ---
+.Rproj.user/
+.Rhistory
+.RData
+.Ruserdata
+
+# --- Quarto ---
+/.quarto/
+*_files/
+*_cache/
+/site_libs/
+
+# --- Sistema operativo ---
+.DS_Store
+Thumbs.db
+
+# --- Editor (Positron/VS Code) ---
+.vscode/
+
+# El .html renderizado SÍ se sube: es el entregable.
+
+**/*.quarto_ipynb
+render.log
