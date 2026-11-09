@@ -33,7 +33,46 @@ format:
         .reveal .nota-breve { font-size: 0.75em; color: #526574; }
         .reveal .cell-output-stdout pre code { font-size: 0.95em; }
         .reveal .cell-output-stderr pre code { font-size: 0.85em; color: #8a4b00; }
+        /* Ruta de exposición: las diapositivas de detalle llevan {visibility="uncounted"} */
+        .reveal .slides section[data-visibility="uncounted"] > h2::before {
+          content: "Detalle técnico"; display: block; width: fit-content;
+          font-size: 0.42em; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase;
+          color: #8a4b00; background: #fbefe2; padding: 0.15em 0.6em; border-radius: 4px;
+          margin-bottom: 0.35em;
+        }
+        .reveal .slides section[data-visibility="uncounted"] > h2 { color: #526574; }
+        .reveal .tabla-decision table { font-size: 0.85em; }
+        .reveal .tabla-decision td, .reveal .tabla-decision th { padding: 0.3em 0.45em; vertical-align: top; }
+        .reveal .tabla-grande table { font-size: 1em; }
         </style>
+    include-after-body:
+      text: |
+        <script>
+        (function () {
+          // Ruta de exposición: N / P (y AvPág / RePág de un control remoto) van a la siguiente /
+          // anterior diapositiva contada, saltando las de detalle técnico (visibility="uncounted").
+          // Flechas y espacio siguen recorriendo todas las diapositivas.
+          function irRuta(paso) {
+            var todas = Array.prototype.slice.call(document.querySelectorAll('.reveal .slides section:not(.stack)'));
+            var i = todas.indexOf(Reveal.getCurrentSlide());
+            for (var j = i + paso; j >= 0 && j < todas.length; j += paso) {
+              if (todas[j].getAttribute('data-visibility') !== 'uncounted') {
+                var ix = Reveal.getIndices(todas[j]);
+                Reveal.slide(ix.h, ix.v);
+                return;
+              }
+            }
+          }
+          function activar() {
+            var sig = function () { irRuta(1); }, ant = function () { irRuta(-1); };
+            Reveal.addKeyBinding({ keyCode: 78, key: 'N', description: 'Siguiente de la exposición (salta el detalle técnico)' }, sig);
+            Reveal.addKeyBinding({ keyCode: 80, key: 'P', description: 'Anterior de la exposición' }, ant);
+            Reveal.addKeyBinding({ keyCode: 34, key: 'AvPág', description: 'Siguiente de la exposición (control remoto)' }, sig);
+            Reveal.addKeyBinding({ keyCode: 33, key: 'RePág', description: 'Anterior de la exposición (control remoto)' }, ant);
+          }
+          if (Reveal.isReady()) { activar(); } else { Reveal.on('ready', activar); }
+        })();
+        </script>
 execute:
   echo: false
   warning: true
@@ -56,7 +95,7 @@ library(scales)
 
 set.seed(2026)
 
-theme_set(theme_minimal(base_size = 15))
+theme_set(theme_minimal(base_size = 19))
 azul <- "#163b56"
 verde <- "#086b78"
 naranja <- "#c85c40"
@@ -119,7 +158,7 @@ ventas_semana_train |>
 La serie está completa: 290 semanas ISO sin huecos, sin faltantes y todas positivas. No hacemos un análisis exploratorio genérico porque todos los equipos tenemos los mismos datos; nos enfocamos en el contexto que agregamos. La franja sombreada es lo que se evalúa: de la semana 31 a la 42 de 2026, es decir, del 27 de julio al 18 de octubre. En esa ventana cae un solo festivo oficial, el 16 de septiembre, en la semana 38.
 :::
 
-## Escala: logaritmo para toda la familia de regresión
+## Escala: logaritmo para toda la familia de regresión {visibility="uncounted"}
 
 ```{r}
 #| label: escala
@@ -173,7 +212,7 @@ En el M2 nos señalaron que no justificamos usar Box-Cox en un modelo y pesos en
 
 # Regresores
 
-## Festivos oficiales: Ley Federal del Trabajo, art. 74
+## Festivos oficiales: Ley Federal del Trabajo, art. 74 {visibility="uncounted"}
 
 ```{r}
 #| label: festivos
@@ -215,7 +254,7 @@ festivos |>
 Construimos el calendario a partir de la fuente oficial: los días de descanso obligatorio del artículo 74 de la Ley Federal del Trabajo, publicada en el Diario Oficial de la Federación. Los festivos que caen en lunes se calculan con la regla de la ley (primer lunes de febrero, tercer lunes de marzo y tercer lunes de noviembre), no con fechas fijas. Incluimos el 1 de octubre de 2024, día de la transmisión del Poder Ejecutivo, que la misma ley marca como descanso obligatorio cada seis años. El Jueves y el Viernes Santo no son obligatorios por ley, pero son días de vacaciones generalizadas en los que muchos negocios cierran o reducen su horario; por eso los tratamos aparte, como una variable de Semana Santa, y la tabla de Semana Santa muestra su efecto en estas ventas. La otra fracción del artículo 74, el día de la jornada electoral, cayó siempre en domingo en este periodo, así que no quita días de venta. La fecha de Pascua cambia cada año y la calculamos con timeDate::Easter().
 :::
 
-## De días a semanas: los regresores
+## De días a semanas: los regresores {visibility="uncounted"}
 
 ```{r}
 #| label: calendario-semanal
@@ -285,7 +324,7 @@ resumen_vecinas <- comparacion_vecinas |>
 ```{r}
 #| label: grafica-vecinas
 #| fig-width: 7
-#| fig-height: 4.6
+#| fig-height: 5.6
 
 comparacion_vecinas |>
   mutate(tipo = factor(tipo, levels = resumen_vecinas$tipo)) |>
@@ -319,7 +358,7 @@ resumen_vecinas |>
 Para tener evidencia sin depender de ningún modelo, comparamos cada semana con el promedio de la semana anterior y la siguiente. Si el calendario no importara, la razón andaría alrededor de 1. Las semanas sin festivo tienen una mediana de `r round(resumen_vecinas$mediana[resumen_vecinas$tipo == "Sin festivo"], 2)` y quedan por debajo de sus vecinas `r scales::percent(resumen_vecinas$por_debajo[resumen_vecinas$tipo == "Sin festivo"], 1)` de las veces. Las semanas con festivo tienen una mediana de `r round(resumen_vecinas$mediana[resumen_vecinas$tipo == "Con festivo"], 2)` y quedan por debajo `r scales::percent(resumen_vecinas$por_debajo[resumen_vecinas$tipo == "Con festivo"], 1)` de las veces. Las Semanas Santas quedan todas por debajo, con una mediana de `r round(resumen_vecinas$mediana[resumen_vecinas$tipo == "Semana Santa"], 2)`. Excluimos aquí las semanas de Navidad y Año Nuevo, porque el pico de diciembre se mezcla con el festivo, y la semana del evento de 2021. En Modelado confirmamos el efecto con el coeficiente estimado y con validación cruzada.
 :::
 
-## Semana Santa, año por año
+## Semana Santa, año por año {visibility="uncounted"}
 
 ```{r}
 #| label: tabla-semana-santa
@@ -338,7 +377,7 @@ tabla_ss |>
 Semana Santa es un festivo móvil: en estos seis años cayó en las semanas 13, 14, 15 y 16. Por eso un patrón estacional fijo (SNAIVE o Fourier) no puede capturarla: si el año pasado cayó en la semana 16, el modelo estacional pone la caída en la 16, aunque este año caiga en la 14. Con una variable indicadora, la caída va a la semana correcta. Todos los años la Semana Santa vendió menos que sus vecinas, entre `r round(100 * (1 - max(tabla_ss$razon)))`% y `r round(100 * (1 - min(tabla_ss$razon)))`% menos.
 :::
 
-## Un evento atípico: 2021-W43
+## Un evento atípico: 2021-W43 {visibility="uncounted"}
 
 ```{r}
 #| label: evento
@@ -391,7 +430,7 @@ picos |>
 Fuera de diciembre, la semana 43 de 2021 vendió `r picos$razon[1]` veces lo que sus vecinas; la siguiente semana más alta se queda en `r picos$razon[2]`. Es consistente con un evento de los que menciona el contexto, como una boda o una inauguración. Si no la marcamos, ese pico infla la estimación estacional de finales de octubre y los errores del ARIMA. Usamos una indicadora que vale 1 solo en esa semana. A futuro vale 0: no podemos saber de antemano si habrá un evento, así que pronosticamos una semana normal. En Modelado verificamos con validación cruzada que mejora el pronóstico.
 :::
 
-## Estacionalidad: Fourier con periodo de 52.18 semanas
+## Estacionalidad: Fourier con periodo de 52.18 semanas {visibility="uncounted"}
 
 ```{r}
 #| label: semanas-por-anio
@@ -409,7 +448,7 @@ semanas_iso <- tibble(anio = 2020:2026) |>
 Esta es la ventaja de que Fourier admita periodos no enteros con datos semanales. Un año dura 52.18 semanas, así que cualquier método que repite el patrón cada 52 semanas se desfasa poco a poco; cada cinco o seis años acumula una semana completa de error. En el M2 elegimos K = 4 sin comparar otros valores; ahora K se elige con el MAPE de validación cruzada. Los términos de Fourier también son regresores conocidos de antemano: dependen solo de la fecha.
 :::
 
-## Valores de los regresores en las 12 semanas a pronosticar
+## Valores de los regresores en las 12 semanas a pronosticar {visibility="uncounted"}
 
 ```{r}
 #| label: futuro
@@ -436,7 +475,35 @@ Estos son los valores exactos que recibe forecast(). La única semana distinta e
 
 # Modelado
 
-## Candidatos
+## ¿Por qué este modelo? {.tabla-decision}
+
+```{r}
+#| label: por-que-modelo
+
+mediana_tipo <- function(t) sprintf("%.2f", resumen_vecinas$mediana[resumen_vecinas$tipo == t])
+semanas_ss <- range(as.integer(sub(".*W", "", tabla_ss$semana)))
+media_anio <- function(a) format(round(anual$media[anual$anio == a]), big.mark = ",")
+anios_53 <- paste(semanas_iso$anio[semanas_iso$semanas == 53], collapse = " y ")
+```
+
+| Lo que muestra la serie | Decisión de modelado |
+|----------------------------------------------|----------------------------------------------|
+| El año dura **52.18 semanas**; los años ISO tienen 52 o 53 (`r anios_53` tienen 53) | Estacionalidad con **Fourier** (`period = "year"` admite periodo no entero) y errores con `PDQ(0, 0, 0)`; K se elige con VC |
+| La dispersión crece con el nivel y el λ de Guerrero no es estable (`r round(lambda_inicio, 2)` vs `r round(lambda_completa, 2)`) | **log(total)**, la misma escala para ARIMA y TSLM, elegida con VC frente a Box-Cox y original |
+| Con festivo, la semana vende **`r mediana_tipo("Con festivo")`** de lo de sus vecinas; en Semana Santa, **`r mediana_tipo("Semana Santa")`**, y esa semana se mueve de W`r semanas_ss[1]` a W`r semanas_ss[2]` | Indicadoras **festivos** y **semana_santa**: la caída va a la semana correcta, cosa que un patrón estacional fijo no logra |
+| 2021-W43 vendió **`r picos$razon[1]`** veces lo de sus vecinas (la siguiente semana más alta: `r picos$razon[2]`) | Indicadora **evento_2021w43**, que vale 0 a futuro |
+| El nivel crece: media anual de **`r media_anio(2021)`** (2021) a **`r media_anio(2025)`** (2025) | Dos formas de seguirlo: **diferencia** en los errores del ARIMA y **tendencia lineal** en la TSLM |
+| Una supone que el nivel se queda y la otra que el crecimiento sigue: pueden errar en sentidos opuestos | **Combinación (ARIMA + TSLM) / 2** |
+
+::: {.nota-breve}
+Todos los regresores se conocen el 26 de julio de 2026 (pronóstico ex ante). Cada decisión se comprueba con validación cruzada en las diapositivas siguientes.
+:::
+
+::: {.notes}
+Esta diapositiva conecta lo que muestra la serie con cada decisión del modelo. Estacionalidad: el año dura 52.18 semanas y los años ISO tienen 52 o 53 (`r anios_53` tienen 53). SNAIVE, que usan el benchmark y nuestro mejor modelo sin regresores (STL con Holt amortiguado), redondea el periodo a 52 y su patrón se desfasa; los términos de Fourier usan el periodo exacto. Por eso la estacionalidad va solo en Fourier y los errores ARIMA llevan PDQ(0, 0, 0): un SARIMA encima duplicaría la estacionalidad, como vimos en el M2. El número de pares K se elige con validación cruzada. Escala: la dispersión crece con el nivel, pero menos que proporcionalmente, y el λ de Guerrero cambia de `r round(lambda_inicio, 2)` a `r round(lambda_completa, 2)` según los datos que se usen; por eso comparamos la escala original, Box-Cox y log con validación cruzada, con una sola escala para los dos componentes. El logaritmo además permite leer cada coeficiente como un porcentaje de las ventas. Calendario: en mediana, las semanas con festivo venden `r mediana_tipo("Con festivo")` de lo que venden sus vecinas y las de Semana Santa `r mediana_tipo("Semana Santa")`. Como la Semana Santa se mueve entre las semanas `r semanas_ss[1]` y `r semanas_ss[2]`, un patrón estacional fijo pone la caída en la semana equivocada; una indicadora la pone en la correcta. Evento: 2021-W43 vendió `r picos$razon[1]` veces lo de sus vecinas; sin indicadora, ese pico infla la estacionalidad de finales de octubre. A futuro vale 0 porque no sabemos de antemano si habrá un evento. Nivel: la media anual pasó de `r media_anio(2021)` pesos en 2021 a `r media_anio(2025)` en 2025. El ARIMA lo sigue con una diferencia, que elige la búsqueda automática, y la TSLM con una tendencia lineal determinística. No sabemos cuál de los dos supuestos se cumplirá en las 12 semanas: el primero supone que el nivel se queda donde está y el segundo que el crecimiento continúa al mismo ritmo. Si se equivocan en sentidos opuestos, su promedio se compensa; la evidencia está en «Por qué combinar». Todos los regresores son determinísticos y se conocen el 26 de julio, así que el pronóstico es ex ante.
+:::
+
+## Candidatos {visibility="uncounted"}
 
 | Familia | Modelo | Escala | Regresores |
 |---|---|---|---|
@@ -460,7 +527,7 @@ spec_benchmark <- decomposition_model(
 Probamos cinco familias. El benchmark es exactamente el del instructivo. El modelo sin regresores es del tipo que trabajamos en el M2: STL con Holt amortiguado para la serie desestacionalizada; lo probamos en las dos escalas. La regresión dinámica es la evolución de nuestro modelo del M2: Fourier con errores ARIMA, ahora con calendario. La regresión lineal TSLM usa una tendencia determinística en lugar de una diferencia. Por último, combinamos las dos regresiones. En todos los ARIMA con regresores usamos PDQ(0,0,0): la estacionalidad la llevan los términos de Fourier y no un componente SARIMA. En el M2 vimos que mezclar los dos duplica la estacionalidad.
 :::
 
-## Validación cruzada: diseño
+## Validación cruzada: diseño {visibility="uncounted"}
 
 ```{r}
 #| label: cv-diseno
@@ -516,7 +583,7 @@ fin_folds |>
 Usamos ventana creciente (stretch_tsibble) por dos razones. Primera: con 5.6 años de datos, cada ciclo anual cuenta para estimar la estacionalidad, y una ventana deslizante de 156 semanas tiraría los primeros años sin necesidad. Segunda: el nivel cambia con el tiempo, pero eso ya lo manejan los modelos, con una diferencia en el ARIMA y una tendencia en la TSLM. El primer entrenamiento tiene 158 semanas, más de las 104 del mínimo: así tiene al menos tres ciclos anuales para estimar 2K coeficientes de Fourier. Además, con .step = 4 el último origen cae justo en 2026-W18, y sus 12 semanas de prueba terminan en la W30, dentro de los datos. Son 31 folds, muy por encima de los 8 requeridos. La medida principal es el promedio del MAPE de los folds.
 :::
 
-## Funciones de evaluación
+## Funciones de evaluación {visibility="uncounted"}
 
 ```{r}
 #| label: cv-funciones
@@ -550,7 +617,7 @@ $$
 Calculamos el MAPE de cada fold con sus 12 semanas y luego lo promediamos; es la fórmula del instructivo. Además del MAPE reportamos tres cosas: la mediana, el peor fold (para ver el riesgo) y el sesgo, que es el error con signo: positivo si el modelo se pasa y negativo si se queda corto. El sesgo muestra si un modelo se pasa o se queda corto de forma sistemática. Todo se calcula contra las ventas originales, en pesos: fable regresa los pronósticos de log(total) ya transformados a la escala original.
 :::
 
-## Elección de K y de la escala
+## Elección de K y de la escala {visibility="uncounted"}
 
 ```{r}
 #| label: cv-k
@@ -608,7 +675,7 @@ err_comb_escala <- err_k |>
 res_k <- resumen_cv(bind_rows(err_k, err_comb_escala))
 ```
 
-## Elección de K y de la escala: resultados
+## Elección de K y de la escala: resultados {visibility="uncounted"}
 
 :::: {.columns}
 
@@ -673,7 +740,7 @@ candidatos_k |>
 Para cada combinación de K y escala buscamos el orden ARIMA con todos los datos y lo fijamos en la validación cruzada, como permite el instructivo, para que el render no tarde demasiado. En la escala log, el mínimo del ARIMA está en K = `r k_mejor$K[k_mejor$familia == "ARIMA"]` y el de la TSLM en K = `r k_mejor$K[k_mejor$familia == "TSLM"]`. Con menos pares, la curva anual es demasiado suave y no alcanza el pico de diciembre; con más, se empieza a ajustar ruido. Esto corrige un punto de la retroalimentación del M2, donde usamos K = 4 sin comparar. La tabla de la derecha decide la escala con K = 8 para los dos componentes y su combinación: la escala con menor error de la combinación es `r tabla_escala$escala[1]` (`r sprintf("%.2f", tabla_escala$COMB[1])`%), y la usamos para toda la familia de regresión; le siguen `r tabla_escala$escala[2]` (`r sprintf("%.2f", tabla_escala$COMB[2])`%) y `r tabla_escala$escala[3]` (`r sprintf("%.2f", tabla_escala$COMB[3])`%).
 :::
 
-## ¿Cada regresor aporta? Validación cruzada quitando uno a la vez
+## ¿Cada regresor aporta? Validación cruzada quitando uno a la vez {visibility="uncounted"}
 
 ```{r}
 #| label: cv-ablacion
@@ -720,7 +787,7 @@ mape_completo <- res_ablacion$MAPE_CV[res_ablacion$.model == "completo"]
 cambio <- setNames(res_ablacion$MAPE_CV - mape_completo, res_ablacion$.model)
 ```
 
-## ¿Cada regresor aporta? Resultados
+## ¿Cada regresor aporta? Resultados {.tabla-grande}
 
 ```{r}
 #| label: tabla-ablacion
@@ -736,6 +803,8 @@ res_ablacion |>
   kable(digits = 2, col.names = c("Variante de la combinación", "MAPE CV (%)",
                                   "Cambio vs final (pp)", "Peor fold (%)"))
 ```
+
+Quitar cualquier regresor del calendario sube el error; agregar 4 indicadoras de diciembre lo `r if (cambio["mas_diciembre"] > 0) "sube" else "baja"` `r sprintf("%.2f", abs(cambio["mas_diciembre"]))` pp, así que no las usamos.
 
 ::: {.notes}
 Esta es la evidencia de que cada regresor aporta fuera de muestra, y no solo dentro de la muestra. Partimos del modelo final y quitamos un regresor a la vez; el orden ARIMA se mantiene fijo para que la comparación sea justa. Quitar los festivos sube el MAPE de validación cruzada `r sprintf("%.2f", cambio["sin_festivos"])` puntos; quitar la Semana Santa, `r sprintf("%.2f", cambio["sin_semanasanta"])`; quitar el evento, `r sprintf("%.2f", cambio["sin_evento"])`; y quitar todo el calendario (dejar solo Fourier), `r sprintf("%.2f", cambio["solo_fourier"])`. También probamos cuatro indicadoras para las semanas de Navidad y Año Nuevo. Dentro de muestra son muy significativas, pero fuera de muestra el MAPE `r if (cambio["mas_diciembre"] > 0) sprintf("sube %.2f puntos", cambio["mas_diciembre"]) else sprintf("solo baja %.2f puntos", -cambio["mas_diciembre"])`: con K = 8, los términos de Fourier ya capturan el pico de diciembre, así que las indicadoras agregan parámetros sin mejorar el pronóstico. Por eso las descartamos: más regresores no siempre es mejor. Además, diciembre ni siquiera está en la ventana del concurso.
@@ -776,7 +845,7 @@ s_cb <- res_sesgo |> filter(.model == "Combinación")
 ```{r}
 #| label: grafica-sesgos
 #| fig-width: 7.5
-#| fig-height: 4.6
+#| fig-height: 5.4
 
 sesgo_folds |>
   ggplot(aes(x = fin, y = sesgo, colour = .model)) +
@@ -796,8 +865,9 @@ sesgo_folds |>
 #| label: tabla-sesgos
 
 res_sesgo |>
+  mutate(.model = sub(" (componente)", "", .model, fixed = TRUE)) |>
   select(.model, MAPE_CV, sesgo, sesgo_reciente, peor_fold) |>
-  kable(digits = 2, col.names = c("Modelo", "MAPE CV", "Sesgo", "Sesgo 2025-26", "Peor fold"))
+  kable(digits = 2, col.names = c("Modelo", "MAPE CV", "Sesgo", "Sesgo 25-26", "Peor fold"))
 ```
 
 :::
@@ -840,7 +910,7 @@ efecto <- function(m, t) round(coef_final$efecto[coef_final$.model == m & coef_f
 Reajustamos ambos componentes con las 290 semanas. Para el ARIMA dejamos que la búsqueda automática eligiera el orden otra vez: salió ARIMA(`r orden_final$p`,`r orden_final$d`,`r orden_final$q`), `r if (mismo_orden) "el mismo orden que fijamos en la validación cruzada; así que lo que evaluamos es lo que entregamos" else "distinto del que fijamos en la validación cruzada"`. En el M2 nos señalaron que no interpretamos si el orden cambió al reestimar; `r if (mismo_orden) "aquí no cambió" else "aquí sí cambió y lo reportamos"`. Como el modelo está en logaritmos, el efecto de un regresor es exp(β) − 1. Un festivo reduce las ventas de esa semana en alrededor de `r abs(efecto("arima", "festivos"))`%, y la Semana Santa en alrededor de `r abs(efecto("arima", "semana_santa"))`%. Los dos componentes estiman efectos casi iguales: el resultado es consistente entre especificaciones.
 :::
 
-## `report()`: componente ARIMA
+## `report()`: componente ARIMA {visibility="uncounted"}
 
 ```{r}
 #| label: report-arima
@@ -852,7 +922,7 @@ report(fit_final |> select(arima))
 El report confirma la especificación. La variable respuesta es log(total) y los errores son ARIMA(`r orden_final$p`,`r orden_final$d`,`r orden_final$q`) sin componente estacional, porque la estacionalidad va en los 16 coeficientes de Fourier. Los regresores de calendario aparecen con el signo esperado: festivos y Semana Santa negativos, evento positivo, y en los tres casos el coeficiente es varias veces su error estándar. La búsqueda automática eligió `r if (orden_final$constant) "incluir" else "no incluir"` constante; con una diferencia, la constante sería un drift. Sin drift, el ARIMA proyecta el nivel reciente y el crecimiento lo aporta la tendencia de la TSLM en la combinación.
 :::
 
-## `report()`: componente TSLM y la combinación
+## `report()`: componente TSLM y la combinación {visibility="uncounted"}
 
 ```{r}
 #| label: report-tslm
@@ -866,7 +936,7 @@ pendiente <- tidy(fit_final |> select(tslm)) |> filter(term == "trend()") |> pul
 La TSLM tiene una tendencia de `r sprintf("%.4f", pendiente)` por semana en logaritmos, es decir, cerca de `r round(100 * (exp(52.18 * pendiente) - 1))`% anual de crecimiento histórico. Por eso tiende a pasarse cuando el crecimiento se frena. Los coeficientes de festivos y Semana Santa son casi iguales a los del ARIMA. La combinación se define dentro de model() como (arima + tslm) / 2; fable promedia los dos pronósticos en pesos.
 :::
 
-## Los efectos son estables entre folds
+## Los efectos son estables entre folds {visibility="uncounted"}
 
 ```{r}
 #| label: estabilidad
@@ -901,7 +971,7 @@ Esta gráfica muestra el coeficiente del componente ARIMA estimado en cada uno d
 
 # Evaluación
 
-## Validación cruzada de los modelos sin regresores
+## Validación cruzada de los modelos sin regresores {visibility="uncounted"}
 
 ```{r}
 #| label: cv-sin-regresores
@@ -931,7 +1001,7 @@ err_sin <- fit_cv_sin |> forecast(h = 12) |> errores_cv()
 Ajustamos el benchmark y tres modelos sin regresores del tipo M2 en los mismos 31 folds: STL con Holt amortiguado en escala original y en log, y STL con ARIMA no estacional en log. Los warnings son del benchmark: SNAIVE, el componente estacional por default de decomposition_model(), avisa que redondea el periodo de 52.18 a 52 semanas, una vez por fold. En nuestros modelos declaramos ese mismo componente como SNAIVE(season_year ~ lag(52)), que es equivalente y no genera el aviso; el benchmark se queda exactamente como en el instructivo. No ocultamos los warnings: son justamente la limitación que los términos de Fourier evitan.
 :::
 
-## Validación cruzada: final vs benchmark vs mejor sin regresores
+## Validación cruzada: final vs benchmark vs mejor sin regresores {visibility="uncounted"}
 
 ```{r}
 #| label: comparacion-final
@@ -992,7 +1062,7 @@ res_tres |>
 Esta es la comparación que pide el proyecto, con los mismos 31 folds para todos los modelos. El benchmark se ajusta exactamente como en el instructivo. De los tres modelos sin regresores que probamos, el mejor es `r nombres_sin[mejor_sin]`; los otros dos fueron peores (`r paste(sprintf("%s: %.2f%%", nombres_sin[res_sin$.model[!res_sin$.model %in% c("benchmark", mejor_sin)]], res_sin$MAPE_CV[!res_sin$.model %in% c("benchmark", mejor_sin)]), collapse = "; ")`). `r if (m_sin > m_bench) sprintf("Ojo: ni siquiera ese modelo le gana al benchmark (%.2f contra %.2f), así que el benchmark es el modelo sin regresores más fuerte que tenemos y la comparación honesta del contexto agregado es contra él.", m_sin, m_bench) else sprintf("Ese modelo le gana al benchmark (%.2f contra %.2f).", m_sin, m_bench)` Nuestro modelo final tiene el menor MAPE, la menor mediana y el menor peor fold; su sesgo promedio es de `r sprintf("%+.1f", res_tres$sesgo[res_tres$.model == "Final (combinación)"])`%, de magnitud parecida a la de los otros modelos. La fila «Referencia: solo Fourier» es el mismo modelo final sin calendario, el tipo de modelo que entregamos en el M2: sirve para aislar cuánto aporta el calendario.
 :::
 
-## Error por horizonte
+## Error por horizonte {visibility="uncounted"}
 
 ```{r}
 #| label: horizonte
@@ -1023,7 +1093,7 @@ por_horizonte |>
 Aquí el MAPE se promedia por horizonte, de una a doce semanas adelante, sobre los 31 folds. El modelo final queda por debajo del benchmark en `r h_gana$vs_bench` de los 12 horizontes y por debajo del mejor sin regresores en `r h_gana$vs_sin`. La ventaja no depende de un horizonte en particular. El error del modelo final casi no crece con el horizonte porque la mayor parte del patrón es estacional y de calendario, que se conoce de antemano. El benchmark y Holt, cuyo patrón estacional es una copia del año anterior (SNAIVE), son mucho más irregulares de un horizonte a otro.
 :::
 
-## Ventanas análogas a la del concurso (W31–W42)
+## Ventanas análogas a la del concurso (W31–W42) {visibility="uncounted"}
 
 ```{r}
 #| label: analogas
@@ -1048,7 +1118,7 @@ err_tres |>
 Dos de los folds tienen como prueba exactamente las semanas 31 a 42 de 2024 y de 2025, la misma temporada que se evalúa en el concurso. Es otra forma de evaluar la elección en más de una ventana, que nos faltó en el M2. Tomamos estas cifras como apoyo, no como criterio principal, porque son solo dos ventanas; el criterio principal sigue siendo el promedio de los 31 folds.
 :::
 
-## Residuales del modelo final (290 semanas)
+## Residuales del modelo final (290 semanas) {visibility="uncounted"}
 
 ```{r}
 #| label: residuales
@@ -1075,7 +1145,7 @@ grandes <- resid_comb |>
 Diagnosticamos el modelo que entregamos, reajustado con las 290 semanas, y no un ajuste en train; esto corrige el punto de la retroalimentación del M2. Son los residuales de la combinación en pesos (venta real menos ajuste). Los más grandes, como porcentaje de la venta, están en `r paste0(grandes$semana, " (", grandes$pct, "%)", collapse = ", ")`. Varios caen en la primera semana del año o en diciembre: el pico decembrino es tan abrupto que la curva de Fourier lo arrastra hacia enero y el ajuste queda muy por encima de la venta. Probamos indicadoras de diciembre y Año Nuevo y no mejoraron fuera de muestra; además, ninguna de esas semanas está en la ventana del concurso. El histograma está cargado ligeramente hacia valores positivos: en promedio el ajuste queda un poco abajo de la venta real; lo explicamos en la siguiente diapositiva. En la ACF quedan algunos rezagos fuera de las bandas, sobre todo cerca del 52; los probamos formalmente con Ljung-Box.
 :::
 
-## Pruebas de Ljung-Box
+## Pruebas de Ljung-Box {visibility="uncounted"}
 
 ```{r}
 #| label: ljung-box
@@ -1129,7 +1199,7 @@ res_tres |>
   mutate(.model = reorder(.model, -MAPE_CV)) |>
   ggplot(aes(x = .model, y = MAPE_CV, fill = .model == "Final (combinación)")) +
   geom_col(show.legend = FALSE) +
-  geom_text(aes(label = sprintf("%.1f%%", MAPE_CV)), hjust = -0.15, size = 5) +
+  geom_text(aes(label = sprintf("%.1f%%", MAPE_CV)), hjust = -0.15, size = 7) +
   coord_flip(clip = "off") +
   scale_fill_manual(values = c("TRUE" = verde, "FALSE" = gris)) +
   scale_y_continuous(expand = expansion(mult = c(0, 0.15))) +
@@ -1138,6 +1208,7 @@ res_tres |>
 
 - Contra el benchmark: **`r sprintf("%.1f", m_bench - m_final)` pp menos** (`r sprintf("%.0f", 100 * (m_bench - m_final) / m_bench)`% menos error).
 - Contra el mejor sin regresores: **`r sprintf("%.1f", m_sin - m_final)` pp menos**. Solo el calendario, sobre el mismo modelo con Fourier: **`r sprintf("%.1f", m_fourier - m_final)` pp**.
+- Gana al benchmark en **`r ganados$vs_bench` de `r ganados$n`** folds y en **`r h_gana$vs_bench` de 12** horizontes.
 
 ::: {.notes}
 Esta es la respuesta a la pregunta central. Cuando el modelo sabe qué pasa alrededor de la serie, el MAPE de validación cruzada baja de `r sprintf("%.1f", m_bench)`% (benchmark) y `r sprintf("%.1f", m_sin)`% (nuestro mejor sin regresores) a `r sprintf("%.1f", m_final)`%. El aporte viene de dos fuentes. Primera: el cambio de familia de modelos (regresión en log con Fourier de periodo exacto, en lugar de STL con SNAIVE), que baja el MAPE de `r sprintf("%.1f", m_bench)`% a `r sprintf("%.1f", m_fourier)`%; esta comparación no separa cuánto se debe solo al periodo no entero. Segunda: el calendario (festivos, Semana Santa y el evento), que sobre el mismo modelo con solo Fourier aporta `r sprintf("%.1f", m_fourier - m_final)` puntos más. En la ventana del concurso, la semana 38 trae un festivo, y nuestro modelo es el único de los tres que lo anticipa.
@@ -1163,25 +1234,27 @@ equipo_8 <- datos |>
 ```{r}
 #| label: grafica-pronostico
 #| fig-width: 8
-#| fig-height: 4.8
+#| fig-height: 5.2
 
 componentes <- fit_final |>
   select(arima, tslm) |>
   forecast(new_data = futuro) |>
   as_tibble() |>
-  mutate(.model = recode(.model, arima = "Componente ARIMA", tslm = "Componente TSLM"))
+  mutate(.model = recode(.model, arima = "ARIMA", tslm = "TSLM"))
 
 datos |>
   filter(semana >= yearweek("2025 W27")) |>
   ggplot(aes(x = semana, y = total)) +
   geom_line(colour = azul) +
   geom_line(data = componentes, aes(y = .mean, colour = .model), linetype = "dashed") +
-  geom_line(data = as_tibble(equipo_8), aes(y = .mean, colour = "equipo_8 (entregado)"),
+  geom_line(data = as_tibble(equipo_8), aes(y = .mean, colour = "equipo_8"),
             linewidth = 1.1) +
-  geom_point(data = as_tibble(equipo_8), aes(y = .mean, colour = "equipo_8 (entregado)")) +
-  scale_colour_manual(values = c("equipo_8 (entregado)" = verde, "Componente ARIMA" = gris,
-                                 "Componente TSLM" = naranja)) +
+  geom_point(data = as_tibble(equipo_8), aes(y = .mean, colour = "equipo_8")) +
+  scale_colour_manual(values = c("equipo_8" = verde, "ARIMA" = gris,
+                                 "TSLM" = naranja)) +
   scale_y_continuous(labels = scales::label_dollar()) +
+  annotate("text", x = yearweek("2026 W38"), y = equipo_8$.mean[equipo_8$semana == yearweek("2026 W38")],
+           vjust = 2, label = "16 de sep.", colour = verde, size = 5) +
   labs(x = NULL, y = "Ventas semanales", colour = NULL) +
   theme(legend.position = "top")
 ```
@@ -1207,7 +1280,7 @@ equipo_8 |>
 El pronóstico se estima con las 290 semanas y cubre exactamente de la W31 a la W42. Es un solo modelo: la combinación definida dentro de model(), con el nombre equipo_8. Las líneas punteadas son sus dos componentes: la TSLM arriba y el ARIMA abajo, y el pronóstico entregado queda a la mitad. La caída de la semana 38 es el festivo del 16 de septiembre. La subida hacia octubre es el inicio de la temporada alta que captura Fourier. Una limitación: fable no calcula la distribución de una combinación de modelos con transformación, así que el fable entregado es puntual, con varianza cero. Lo que se califica es la columna .mean, y validar_entrega() lo acepta así (no somos de maestría).
 :::
 
-## Validación y guardado
+## Validación y guardado {visibility="uncounted"}
 
 ```{r}
 #| label: validar-guardar
