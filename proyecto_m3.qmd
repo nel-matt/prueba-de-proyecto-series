@@ -398,7 +398,7 @@ tabla_sep16 |>
         format.args = list(big.mark = ","))
 ```
 
-- En `r sum(tabla_sep16$razon < 1)` de 5 años vendió **menos** que sus vecinas: razón media **`r sprintf("%.2f", mean(tabla_sep16$razon))`**, igual que los otros festivos (**`r sprintf("%.2f", mean(otros_festivos$razon))`**).
+- En `r sum(tabla_sep16$razon < 1)` de 5 años vendió **menos** que sus vecinas: razón media **`r sprintf("%.2f", mean(tabla_sep16$razon))`**, casi igual que los otros festivos (**`r sprintf("%.2f", mean(otros_festivos$razon))`**).
 - Solo subió cuando el 16 cayó en **`r paste(tabla_sep16$dia[tabla_sep16$razon > 1], collapse = " o ")`** (puente). En 2026 cae en **miércoles**.
 - La "noche mexicana" no compensa el día cerrado: la W38 se queda como un festivo más.
 
@@ -537,7 +537,7 @@ Esta diapositiva conecta lo que muestra la serie con cada decisión del modelo. 
 | Familia | Modelo | Escala | Regresores |
 |---|---|---|---|
 | Benchmark | STL + ARIMA no estacional + SNAIVE | Original | Ninguno |
-| Sin regresores (tipo M2) | STL + Holt amortiguado + SNAIVE | Original y log | Ninguno |
+| Sin regresores (tipo M2) | STL + Holt amortiguado + SNAIVE; STL + ARIMA no estacional + SNAIVE | Holt: original y log; ARIMA: log | Ninguno |
 | Regresión dinámica | ARIMA(log(total) ~ Fourier + calendario) | Log (K = 4, 6, 8, 10); Box-Cox y original (K = 8) | Fourier + calendario |
 | Regresión lineal | TSLM(log(total) ~ trend + Fourier + calendario) | Log (K = 4, 6, 8, 10); Box-Cox y original (K = 8) | Fourier + calendario |
 | Combinación | (ARIMA + TSLM) / 2 | Log | Fourier K = 8 + calendario |
@@ -593,7 +593,7 @@ prueba_cv <- fin_folds |>                             # 12 semanas de prueba por
 ```{r}
 #| label: grafica-folds
 #| fig-width: 7.5
-#| fig-height: 4.6
+#| fig-height: 4.0
 
 fin_folds |>
   mutate(inicio = yearweek("2021 W01")) |>
@@ -873,7 +873,7 @@ res_ablacion |>
                                   "Cambio vs final (pp)", "Peor fold (%)", "Folds que gana (de 31)"))
 ```
 
-Quitar cualquier regresor del calendario sube el error. Ninguno de los cinco regresores extra mejora de forma consistente (el que más gana lo hace en `r max(gana_final[grepl("^mas_", names(gana_final))])` de 31 folds), así que no los usamos.
+Quitar cualquier regresor del calendario sube el error. Ninguno de los cinco regresores extra mejora de forma consistente: el mejor, «`r sub("Agregar ", "", etiquetas[names(which.min(cambio[grepl("^mas_", names(cambio))]))])`», cambia el MAPE `r sprintf("%+.2f", min(cambio[grepl("^mas_", names(cambio))]))` pp y gana en `r gana_final[names(which.min(cambio[grepl("^mas_", names(cambio))]))]` de 31 folds, un empate; así que no los usamos.
 
 ::: {.notes}
 Esta es la evidencia de que cada regresor aporta fuera de muestra, y no solo dentro de la muestra. Partimos del modelo final y quitamos un regresor a la vez; el orden ARIMA se mantiene fijo para que la comparación sea justa. Quitar los festivos sube el MAPE de validación cruzada `r sprintf("%.2f", cambio["sin_festivos"])` puntos; quitar la Semana Santa, `r sprintf("%.2f", cambio["sin_semanasanta"])`; quitar el evento, `r sprintf("%.2f", cambio["sin_evento"])`; y quitar todo el calendario (dejar solo Fourier), `r sprintf("%.2f", cambio["solo_fourier"])`. Después probamos agregar regresores, cada uno con una hipótesis concreta. Cuatro indicadoras de las semanas de Navidad y fin de año: dentro de muestra corrigen el pico, pero cada semana de diciembre solo cae en la prueba de unos pocos folds y fuera de muestra el MAPE `r if (cambio["mas_diciembre"] > 0) sprintf("sube %.2f puntos", cambio["mas_diciembre"]) else sprintf("solo baja %.2f puntos", -cambio["mas_diciembre"])`. Una indicadora propia para la semana del 16 de septiembre, la W38 del concurso, sube el MAPE `r sprintf("%.2f", cambio["mas_sep16"])` puntos y gana solo en `r gana_final["mas_sep16"]` de 31 folds; incluso en la propia semana del 16 el error pasa de `r sprintf("%.1f", ape16["completo"])`% a `r sprintf("%.1f", ape16["mas_sep16"])`%: con cinco observaciones el coeficiente propio es ruidoso y desacomoda la curva de Fourier alrededor de septiembre. La semana de Pascua (`r sprintf("%+.2f", cambio["mas_pascua"])` puntos, gana en `r gana_final["mas_pascua"]` folds), los días de quincena (`r sprintf("%+.2f", cambio["mas_quincena"])`, gana en `r gana_final["mas_quincena"]`) y la primera semana de enero, donde están los residuales más negativos (`r sprintf("%+.2f", cambio["mas_enero"])`, gana en `r gana_final["mas_enero"]`), no mejoran de forma consistente. Por eso no los incluimos: más regresores no siempre es mejor, y ninguno de ellos cae en la ventana del concurso salvo el 16 de septiembre, que ya entra como festivo.
@@ -1055,6 +1055,7 @@ coef_folds |>
   geom_ribbon(aes(ymin = bajo, ymax = alto), fill = verde, alpha = 0.2) +
   geom_line(colour = verde, linewidth = 1) +
   facet_wrap(~term) +
+  scale_x_yearweek(breaks = yearweek(c("2024 W01", "2025 W01", "2026 W01"))) +
   labs(x = "Fin del entrenamiento del fold", y = "Efecto estimado (%) ± 2 e.e.")
 ```
 
@@ -1152,7 +1153,7 @@ res_tres |>
 ::::
 
 ::: {.notes}
-Esta es la comparación que pide el proyecto, con los mismos 31 folds para todos los modelos. El benchmark se ajusta exactamente como en el instructivo. De los tres modelos sin regresores que probamos, el mejor es `r nombres_sin[mejor_sin]`; los otros dos fueron peores (`r paste(sprintf("%s: %.2f%%", nombres_sin[res_sin$.model[!res_sin$.model %in% c("benchmark", mejor_sin)]], res_sin$MAPE_CV[!res_sin$.model %in% c("benchmark", mejor_sin)]), collapse = "; ")`). `r if (m_sin > m_bench) sprintf("Ojo: ni siquiera ese modelo le gana al benchmark (%.2f contra %.2f), así que el benchmark es el modelo sin regresores más fuerte que tenemos y la comparación honesta del contexto agregado es contra él.", m_sin, m_bench) else sprintf("Ese modelo le gana al benchmark (%.2f contra %.2f).", m_sin, m_bench)` Nuestro modelo final tiene el menor MAPE, la menor mediana y el menor peor fold; su sesgo promedio es de `r sprintf("%+.1f", res_tres$sesgo[res_tres$.model == "Final (combinación)"])`%, de magnitud parecida a la de los otros modelos. La fila «Referencia: solo Fourier» es el mismo modelo final sin calendario, el tipo de modelo que entregamos en el M2: sirve para aislar cuánto aporta el calendario.
+Esta es la comparación que pide el proyecto, con los mismos 31 folds para todos los modelos. El benchmark se ajusta exactamente como en el instructivo. De los tres modelos sin regresores que probamos, el mejor es `r nombres_sin[mejor_sin]`; los otros dos fueron peores (`r paste(sprintf("%s: %.2f%%", nombres_sin[res_sin$.model[!res_sin$.model %in% c("benchmark", mejor_sin)]], res_sin$MAPE_CV[!res_sin$.model %in% c("benchmark", mejor_sin)]), collapse = "; ")`). `r if (m_sin > m_bench) sprintf("Ojo: ni siquiera ese modelo le gana al benchmark (%.2f contra %.2f), así que el benchmark es el modelo sin regresores más fuerte que tenemos y la comparación honesta del contexto agregado es contra él.", m_sin, m_bench) else sprintf("Ese modelo le gana al benchmark (%.2f contra %.2f).", m_sin, m_bench)` De estos cuatro modelos, el final tiene el menor MAPE, la menor mediana y el menor peor fold (fuera de esta tabla, la TSLM sola y algunas variantes quedan unas décimas abajo en MAPE; elegimos la combinación por sesgo y peor fold, como explicamos en Modelado); su sesgo promedio es de `r sprintf("%+.1f", res_tres$sesgo[res_tres$.model == "Final (combinación)"])`%, de magnitud parecida a la de los otros modelos. La fila «Referencia: solo Fourier» es el mismo modelo final sin calendario, el tipo de modelo que entregamos en el M2: sirve para aislar cuánto aporta el calendario.
 :::
 
 ## Otras especificaciones probadas {visibility="uncounted"}
@@ -1285,7 +1286,8 @@ Dos de los folds tienen como prueba exactamente las semanas 31 a 42 de 2024 y de
 #| fig-width: 11
 #| fig-height: 5.6
 
-gg_tsresiduals(fit_final |> select(combinacion), lag_max = 60)
+gg_tsresiduals(fit_final |> select(combinacion), lag_max = 60) +
+  labs(y = "Residual (pesos)")
 ```
 
 ```{r}

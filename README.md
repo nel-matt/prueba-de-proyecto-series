@@ -17,7 +17,7 @@ de Forecasting de Series de Tiempo (ITESO).
 ## Cómo reproducir
 
 1. Clonar el repo y abrir la carpeta en Positron.
-2. Paquetes (CRAN): `fpp3`, `timeDate`, `knitr`.
+2. Paquetes (CRAN): `fpp3`, `timeDate`, `knitr`, `scales`.
 3. `quarto render proyecto_m3.qmd` (sin caché; tarda unos minutos por la validación cruzada).
 
 El render genera `proyecto_m3.html` y `equipo_8.RData` y corre `validar_entrega()`.
