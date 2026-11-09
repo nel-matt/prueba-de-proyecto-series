@@ -1,11 +1,7 @@
 ---
 title: "Proyecto Módulo 3"
 subtitle: "Pronóstico de ventas semanales con contexto"
-author:
-  - "Equipo 8"
-  - "Juan Pablo Arroyo · Mariana García · Paulina Loera · Matteo Nelson"
-date: 2026-11-13
-date-format: "D [de] MMMM [de] YYYY"
+author: "Equipo 8"
 lang: es
 format:
   revealjs:
